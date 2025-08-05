@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FileToJPG - Convertisseur de fichiers en images</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.0/mammoth.browser.min.js"></script>
+    <style>
+        .dropzone {
+            border: 2px dashed #3b82f6;
+            transition: all 0.3s ease;
+        }
+        .dropzone.active {
+            border-color: #10b981;
+            background-color: #f0fdf4;
+        }
+        .file-item:hover {
+            background-color: #f8fafc;
+        }
+        .progress-bar {
+            transition: width 0.3s ease;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .animate-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-blue-600 mb-2">FileToJPG</h1>
+            <p class="text-lg text-gray-600">Convertissez vos fichiers Word, PDF et Excel en images JPG en quelques clics</p>
+        </header>
+
+        <!-- Main Content -->
+        <main>
+            <!-- Upload Section -->
+            <div class="max-w-3xl mx-auto bg-white rounded-xl shadow-md overflow-hidden mb-8">
+                <div class="p-8">
+                    <div 
+                        id="dropzone" 
+                        class="dropzone rounded-lg p-12 text-center cursor-pointer"
+                        ondragover="event.preventDefault(); this.classList.add('active');"
+                        ondragleave="this.classList.remove('active');"
+                        ondrop="event.preventDefault(); this.classList.remove('active'); handleFiles(event.dataTransfer.files);"
+                    >
+                        <div class="flex flex-col items-center justify-center space-y-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                            <h3 class="text-xl font-semibold text-gray-700">Glissez-déposez vos fichiers ici</h3>
+                            <p class="text-gray-500">ou</p>
+                            <label for="fileInput" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition cursor-pointer">
+                                Sélectionnez des fichiers
+                            </label>
+                            <input id="fileInput" type="file" class="hidden" multiple accept=".doc,.docx,.pdf,.xls,.xlsx" onchange="handleFiles(this.files)">
+                            <p class="text-sm text-gray-500 mt-2">Formats supportés: DOC, DOCX, PDF, XLS, XLSX</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- File List Section -->
+            <div id="fileListSection" class="max-w-3xl mx-auto bg-white rounded-xl shadow-md overflow-hidden mb-8 hidden">
+                <div class="p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Fichiers à convertir</h2>
+                    <div id="fileList" class="space-y-3">
+                        <!-- Files will be listed here -->
+                    </div>
+                    <div class="mt-6 flex justify-end">
+                        <button id="convertBtn" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
+                            Convertir tout
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Section -->
+            <div id="progressSection" class="max-w-3xl mx-auto bg-white rounded-xl shadow-md overflow-hidden mb-8 hidden">
+                <div class="p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Conversion en cours</h2>
+                    <div id="progressContainer" class="space-y-4">
+                        <!-- Progress items will be added here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="resultsSection" class="max-w-3xl mx-auto bg-white rounded-xl shadow-md overflow-hidden hidden">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold text-gray-800">Résultats de conversion</h2>
+                        <button id="downloadAllBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center text-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
+                            Tout télécharger
+                        </button>
+                    </div>
+                    <div id="resultsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        <!-- Results will be displayed here -->
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="text-center mt-12 text-gray-500 text-sm">
+            <p>FileToJPG - Convertisseur de fichiers en images JPG</p>
+            <p class="mt-1">Tous droits réservés © <span id="currentYear"></span></p>
+        </footer>
+    </div>
+
+    <script>
+        // Set current year in footer
+        document.getElementById('currentYear').textContent = new Date().getFullYear();
+
+        // Initialize PDF.js worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js';
+
+        // Store files and converted images
+        let filesToConvert = [];
+        let convertedImages = [];
+
+        // Handle file selection
+        function handleFiles(selectedFiles) {
+            if (!selectedFiles || selectedFiles.length === 0) return;
+            
+            // Filter only supported files
+            const supportedFiles = Array.from(selectedFiles).filter(file => {
+                const extension = file.name.split('.').pop().toLowerCase();
+                return ['doc', 'docx', 'pdf', 'xls', 'xlsx'].includes(extension);
+            });
+
+            if (supportedFiles.length === 0) {
+                alert('Aucun fichier supporté sélectionné. Formats acceptés: DOC, DOCX, PDF, XLS, XLSX');
+                return;
+            }
+
+            // Add files to the list
+            filesToConvert = [...filesToConvert, ...supportedFiles];
+            updateFileList();
+            document.getElementById('fileListSection').classList.remove('hidden');
+        }
+
+        // Update the file list UI
+        function updateFileList() {
+            const fileListElement = document.getElementById('fileList');
+            fileListElement.innerHTML = '';
+
+            filesToConvert.forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item flex items-center justify-between p-3 border border-gray-200 rounded-lg';
+                
+                const fileInfo = document.createElement('div');
+                fileInfo.className = 'flex items-center space-x-3';
+                
+                // File icon based on type
+                const icon = document.createElement('div');
+                icon.className = 'text-blue-500';
+                
+                const extension = file.name.split('.').pop().toLowerCase();
+                let iconPath;
+                
+                switch(extension) {
+                    case 'pdf':
+                        iconPath = 'M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z';
+                        break;
+                    case 'doc':
+                    case 'docx':
+                        iconPath = 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z';
+                        break;
+                    case 'xls':
+                    case 'xlsx':
+                        iconPath = 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z';
+                        break;
+                    default:
+                        iconPath = 'M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z';
+                }
+                
+                icon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${iconPath}" /></svg>`;
+                
+                const fileName = document.createElement('span');
+                fileName.className = 'font-medium text-gray-700 truncate max-w-xs';
+                fileName.textContent = file.name;
+                
+                const fileSize = document.createElement('span');
+                fileSize.className = 'text-sm text-gray-500';
+                fileSize.textContent = formatFileSize(file.size);
+                
+                fileInfo.appendChild(icon);
+                fileInfo.appendChild(document.createElement('div').appendChild(fileName));
+                fileInfo.appendChild(document.createElement('div').appendChild(fileSize));
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'text-red-500 hover:text-red-700';
+                removeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>';
+                removeBtn.onclick = () => removeFile(index);
+                
+                fileItem.appendChild(fileInfo);
+                fileItem.appendChild(removeBtn);
+                fileListElement.appendChild(fileItem);
+            });
+        }
+
+        // Remove file from the list
+        function removeFile(index) {
+            filesToConvert.splice(index, 1);
+            if (filesToConvert.length === 0) {
+                document.getElementById('fileListSection').classList.add('hidden');
+            } else {
+                updateFileList();
+            }
+        }
+
+        // Format file size
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Convert button click handler
+        document.getElementById('convertBtn').addEventListener('click', async () => {
+            if (filesToConvert.length === 0) return;
+            
+            // Show progress section
+            document.getElementById('fileListSection').classList.add('hidden');
+            document.getElementById('progressSection').classList.remove('hidden');
+            
+            // Create progress items
+            const progressContainer = document.getElementById('progressContainer');
+            progressContainer.innerHTML = '';
+            
+            filesToConvert.forEach(file => {
+                const progressItem = document.createElement('div');
+                progressItem.className = 'space-y-2';
+                
+                const fileName = document.createElement('div');
+                fileName.className = 'flex justify-between text-sm';
+                fileName.innerHTML = `<span class="font-medium text-gray-700 truncate">${file.name}</span> <span class="text-gray-500">0%</span>`;
+                
+                const progressBar = document.createElement('div');
+                progressBar.className = 'w-full bg-gray-200 rounded-full h-2.5';
+                progressBar.innerHTML = '<div class="progress-bar bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>';
+                
+                progressItem.appendChild(fileName);
+                progressItem.appendChild(progressBar);
+                progressContainer.appendChild(progressItem);
+            });
+            
+            // Convert each file
+            convertedImages = [];
+            for (let i = 0; i < filesToConvert.length; i++) {
+                const file = filesToConvert[i];
+                const progressItem = progressContainer.children[i];
+                const progressText = progressItem.querySelector('span:last-child');
+                const progressBar = progressItem.querySelector('.progress-bar');
+                
+                try {
+                    progressText.textContent = 'Conversion...';
+                    progressBar.classList.add('animate-pulse');
+                    
+                    const images = await convertFileToJPG(file, (progress) => {
+                        const percent = Math.round(progress * 100);
+                        progressText.textContent = `${percent}%`;
+                        progressBar.style.width = `${percent}%`;
+                    });
+                    
+                    progressBar.classList.remove('animate-pulse');
+                    progressBar.classList.remove('bg-blue-600');
+                    progressBar.classList.add('bg-green-500');
+                    progressText.textContent = 'Terminé ✓';
+                    
+                    convertedImages.push({
+                        fileName: file.name.replace(/\.[^/.]+$/, ''),
+                        images: images
+                    });
+                } catch (error) {
+                    console.error('Conversion error:', error);
+                    progressBar.classList.remove('animate-pulse');
+                    progressBar.classList.remove('bg-blue-600');
+                    progressBar.classList.add('bg-red-500');
+                    progressText.textContent = 'Erreur  ✗';
+                }
+            }
+            
+            // Show results
+            document.getElementById('progressSection').classList.add('hidden');
+            showResults();
+        });
+
+        // Convert file to JPG images
+        async function convertFileToJPG(file, progressCallback) {
+            const extension = file.name.split('.').pop().toLowerCase();
+            progressCallback(0.1);
+            
+            if (extension === 'pdf') {
+                return await convertPdfToJPG(file, progressCallback);
+            } else if (extension === 'doc' || extension === 'docx') {
+                return await convertWordToJPG(file, progressCallback);
+            } else if (extension === 'xls' || extension === 'xlsx') {
+                return await convertExcelToJPG(file, progressCallback);
+            }
+            
+            throw new Error('Format non supporté');
+        }
+
+        // Convert PDF to JPG
+        async function convertPdfToJPG(file, progressCallback) {
+            return new Promise((resolve, reject) => {
+                const fileReader = new FileReader();
+                
+                fileReader.onload = async function() {
+                    try {
+                        const typedArray = new Uint8Array(this.result);
+                        const pdf = await pdfjsLib.getDocument(typedArray).promise;
+                        const images = [];
+                        
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            const page = await pdf.getPage(i);
+                            progressCallback(0.1 + (i / pdf.numPages) * 0.8);
+                            
+                            const viewport = page.getViewport({ scale: 2.0 });
+                            const canvas = document.createElement('canvas');
+                            const context = canvas.getContext('2d');
+                            
+                            canvas.height = viewport.height;
+                            canvas.width = viewport.width;
+                            
+                            await page.render({
+                                canvasContext: context,
+                                viewport: viewport
+                            }).promise;
+                            
+                            const imageData = canvas.toDataURL('image/jpeg', 0.8);
+                            images.push(imageData);
+                        }
+                        
+                        progressCallback(1);
+                        resolve(images);
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                
+                fileReader.onerror = reject;
+                fileReader.readAsArrayBuffer(file);
+            });
+        }
+
+        // Convert Word to JPG (simplified - would need server-side processing for better results)
+        async function convertWordToJPG(file, progressCallback) {
+            return new Promise((resolve, reject) => {
+                const fileReader = new FileReader();
+                
+                fileReader.onload = async function() {
+                    try {
+                        const arrayBuffer = this.result;
+                        const result = await mammoth.extractRawText({ arrayBuffer });
+                        
+                        // Create a simple image representation of the text
+                        const canvas = document.createElement('canvas');
+                        const context = canvas.getContext('2d');
+                        
+                        canvas.width = 800;
+                        canvas.height = Math.max(600, result.value.split('\n').length * 20);
+                        context.fillStyle = 'white';
+                        context.fillRect(0, 0, canvas.width, canvas.height);
+                        context.fillStyle = 'black';
+                        context.font = '16px Arial';
+                        
+                        const lines = result.value.split('\n');
+                        lines.forEach((line, index) => {
+                            context.fillText(line, 20, 30 + index * 20);
+                        });
+                        
+                        progressCallback(1);
+                        resolve([canvas.toDataURL('image/jpeg', 0.8)]);
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                
+                fileReader.onerror = reject;
+                fileReader.readAsArrayBuffer(file);
+            });
+        }
+
+        // Convert Excel to JPG (simplified - would need server-side processing for better results)
+        async function convertExcelToJPG(file, progressCallback) {
+            return new Promise((resolve, reject) => {
+                const fileReader = new FileReader();
+                
+                fileReader.onload = function() {
+                    try {
+                        const data = new Uint8Array(this.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        
+                        // Create a simple image representation of the first sheet
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        const html = XLSX.utils.sheet_to_html(worksheet);
+                        
+                        const canvas = document.createElement('canvas');
+                        const context = canvas.getContext('2d');
+                        
+                        // Create a temporary div to render the HTML table
+                        const tempDiv = document.createElement('div');
+                        tempDiv.style.position = 'absolute';
+                        tempDiv.style.left = '-9999px';
+                        tempDiv.style.width = '800px';
+                        tempDiv.innerHTML = html;
+                        document.body.appendChild(tempDiv);
+                        
+                        // Style the table
+                        const table = tempDiv.querySelector('table');
+                        if (table) {
+                            table.style.borderCollapse = 'collapse';
+                            table.style.width = '100%';
+                            Array.from(table.querySelectorAll('td, th')).forEach(cell => {
+                                cell.style.border = '1px solid #ddd';
+                                cell.style.padding = '8px';
+                            });
+                        }
+                        
+                        // Calculate canvas size based on table content
+                        const width = 800;
+                        const height = tempDiv.offsetHeight;
+                        
+                        // Use html2canvas for better rendering (would need to include the library)
+                        // For this example, we'll create a simple representation
+                        canvas.width = width;
+                        canvas.height = height;
+                        context.fillStyle = 'white';
+                        context.fillRect(0, 0, width, height);
+                        context.fillStyle = 'black';
+                        context.font = '14px Arial';
+                        
+                        if (table) {
+                            const rows = table.rows;
+                            for (let i = 0; i < rows.length; i++) {
+                                const cells = rows[i].cells;
+                                for (let j = 0; j < cells.length; j++) {
+                                    context.fillText(cells[j].textContent, j * 100 + 10, i * 20 + 20);
+                                }
+                            }
+                        }
+                        
+                        document.body.removeChild(tempDiv);
+                        progressCallback(1);
+                        resolve([canvas.toDataURL('image/jpeg', 0.8)]);
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                
+                fileReader.onerror = reject;
+                fileReader.readAsArrayBuffer(file);
+            });
+        }
+
+        // Show conversion results
+        function showResults() {
+            const resultsGrid = document.getElementById('resultsGrid');
+            resultsGrid.innerHTML = '';
+            
+            convertedImages.forEach((conversion, index) => {
+                conversion.images.forEach((imageData, imageIndex) => {
+                    const resultItem = document.createElement('div');
+                    resultItem.className = 'bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm';
+                    
+                    const imageContainer = document.createElement('div');
+                    imageContainer.className = 'p-4 bg-gray-50 flex justify-center';
+                    
+                    const img = document.createElement('img');
+                    img.src = imageData;
+                    img.className = 'max-h-48 object-contain';
+                    img.alt = `${conversion.fileName} - Page ${imageIndex + 1}`;
+                    
+                    imageContainer.appendChild(img);
+                    
+                    const infoContainer = document.createElement('div');
+                    infoContainer.className = 'p-3 border-t border-gray-200';
+                    
+                    const fileName = document.createElement('div');
+                    fileName.className = 'font-medium text-gray-800 truncate';
+                    fileName.textContent = `${conversion.fileName}${conversion.images.length > 1 ? ` - Page ${imageIndex + 1}` : ''}`;
+                    
+                    const downloadBtn = document.createElement('button');
+                    downloadBtn.className = 'mt-2 w-full px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition text-sm flex items-center justify-center';
+                    downloadBtn.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                        </svg>
+                        Télécharger
+                    `;
+                    downloadBtn.onclick = () => downloadImage(imageData, `${conversion.fileName}${conversion.images.length > 1 ? `-page-${imageIndex + 1}` : ''}.jpg`);
+                    
+                    infoContainer.appendChild(fileName);
+                    infoContainer.appendChild(downloadBtn);
+                    
+                    resultItem.appendChild(imageContainer);
+                    resultItem.appendChild(infoContainer);
+                    resultsGrid.appendChild(resultItem);
+                });
+            });
+            
+            document.getElementById('resultsSection').classList.remove('hidden');
+        }
+
+        // Download single image
+        function downloadImage(imageData, fileName) {
+            const link = document.createElement('a');
+            link.href = imageData;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Download all images
+        document.getElementById('downloadAllBtn').addEventListener('click', () => {
+            convertedImages.forEach((conversion, index) => {
+                conversion.images.forEach((imageData, imageIndex) => {
+                    setTimeout(() => {
+                        downloadImage(imageData, `${conversion.fileName}${conversion.images.length > 1 ? `-page-${imageIndex + 1}` : ''}.jpg`);
+                    }, index * 300);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
