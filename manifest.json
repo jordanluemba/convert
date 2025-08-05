@@ -2,7 +2,7 @@
   "name": "FileToJPG",
   "short_name": "FileToJPG",
   "description": "Convertissez vos fichiers Word, PDF et Excel en images JPG",
-  "start_url": "/",
+  "start_url": "/convert/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#3b82f6",

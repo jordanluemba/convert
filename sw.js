@@ -1,9 +1,9 @@
 const CACHE_NAME = 'filetojpg-v1';
 const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/styles.css',
-  '/app.js',
+  '/convert/',
+  '/convert/index.html',
+  '/convert/styles.css',
+  '/convert/app.js',
   'https://cdn.tailwindcss.com',
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
