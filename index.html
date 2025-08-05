@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#3b82f6">
+    <meta name="description" content="Convertissez vos fichiers Word, PDF et Excel en images JPG">
     <title>FileToJPG - Convertisseur de fichiers en images</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🖼️</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -17,8 +21,14 @@
             border-color: #10b981;
             background-color: #f0fdf4;
         }
+        .dark .dropzone.active {
+            background-color: #052e16;
+        }
         .file-item:hover {
             background-color: #f8fafc;
+        }
+        .dark .file-item:hover {
+            background-color: #1e293b;
         }
         .progress-bar {
             transition: width 0.3s ease;
@@ -30,53 +40,88 @@
         .animate-pulse {
             animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
+        .dark {
+            color-scheme: dark;
+        }
+        .app-icon {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #3b82f6;
+            color: white;
+            border-radius: 12px;
+            font-size: 24px;
+            margin-right: 12px;
+        }
+        .dark .app-icon {
+            background: #1e40af;
+        }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
+<body class="bg-gray-50 dark:bg-gray-900 min-h-screen">
     <div class="container mx-auto px-4 py-8">
         <!-- Header -->
         <header class="text-center mb-12">
-            <h1 class="text-4xl font-bold text-blue-600 mb-2">FileToJPG</h1>
-            <p class="text-lg text-gray-600">Convertissez vos fichiers Word, PDF et Excel en images JPG en quelques clics</p>
+            <div class="flex items-center justify-center mb-4">
+                <div class="app-icon">
+                    🖼️
+                </div>
+                <div>
+                    <h1 class="text-4xl font-bold text-blue-600 dark:text-blue-400 mb-2">FileToJPG</h1>
+                    <p class="text-lg text-gray-600 dark:text-gray-300">Convertissez vos fichiers Word, PDF et Excel en images JPG</p>
+                </div>
+            </div>
+            <div class="flex justify-center">
+                <button id="themeToggle" class="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200">
+                    <svg id="sunIcon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                    <svg id="moonIcon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                    </svg>
+                </button>
+            </div>
         </header>
 
         <!-- Main Content -->
         <main>
             <!-- Upload Section -->
-            <div class="max-w-3xl mx-auto bg-white rounded-xl shadow-md overflow-hidden mb-8">
+            <div class="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden mb-8">
                 <div class="p-8">
                     <div 
                         id="dropzone" 
-                        class="dropzone rounded-lg p-12 text-center cursor-pointer"
+                        class="dropzone rounded-lg p-12 text-center cursor-pointer dark:border-blue-400 dark:bg-gray-700/30"
                         ondragover="event.preventDefault(); this.classList.add('active');"
                         ondragleave="this.classList.remove('active');"
                         ondrop="event.preventDefault(); this.classList.remove('active'); handleFiles(event.dataTransfer.files);"
                     >
                         <div class="flex flex-col items-center justify-center space-y-4">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-blue-500 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                             </svg>
-                            <h3 class="text-xl font-semibold text-gray-700">Glissez-déposez vos fichiers ici</h3>
-                            <p class="text-gray-500">ou</p>
-                            <label for="fileInput" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition cursor-pointer">
+                            <h3 class="text-xl font-semibold text-gray-700 dark:text-gray-200">Glissez-déposez vos fichiers ici</h3>
+                            <p class="text-gray-500 dark:text-gray-400">ou</p>
+                            <label for="fileInput" class="px-6 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition cursor-pointer">
                                 Sélectionnez des fichiers
                             </label>
                             <input id="fileInput" type="file" class="hidden" multiple accept=".doc,.docx,.pdf,.xls,.xlsx" onchange="handleFiles(this.files)">
-                            <p class="text-sm text-gray-500 mt-2">Formats supportés: DOC, DOCX, PDF, XLS, XLSX</p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Formats supportés: DOC, DOCX, PDF, XLS, XLSX</p>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- File List Section -->
-            <div id="fileListSection" class="max-w-3xl mx-auto bg-white rounded-xl shadow-md overflow-hidden mb-8 hidden">
+            <div id="fileListSection" class="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden mb-8 hidden">
                 <div class="p-6">
-                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Fichiers à convertir</h2>
+                    <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Fichiers à convertir</h2>
                     <div id="fileList" class="space-y-3">
                         <!-- Files will be listed here -->
                     </div>
                     <div class="mt-6 flex justify-end">
-                        <button id="convertBtn" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center">
+                        <button id="convertBtn" class="px-6 py-2 bg-green-600 dark:bg-green-700 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition flex items-center">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                                 <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
                             </svg>
@@ -87,9 +132,9 @@
             </div>
 
             <!-- Progress Section -->
-            <div id="progressSection" class="max-w-3xl mx-auto bg-white rounded-xl shadow-md overflow-hidden mb-8 hidden">
+            <div id="progressSection" class="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden mb-8 hidden">
                 <div class="p-6">
-                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Conversion en cours</h2>
+                    <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Conversion en cours</h2>
                     <div id="progressContainer" class="space-y-4">
                         <!-- Progress items will be added here -->
                     </div>
@@ -97,11 +142,11 @@
             </div>
 
             <!-- Results Section -->
-            <div id="resultsSection" class="max-w-3xl mx-auto bg-white rounded-xl shadow-md overflow-hidden hidden">
+            <div id="resultsSection" class="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden hidden">
                 <div class="p-6">
                     <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xl font-semibold text-gray-800">Résultats de conversion</h2>
-                        <button id="downloadAllBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center text-sm">
+                        <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Résultats de conversion</h2>
+                        <button id="downloadAllBtn" class="px-4 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition flex items-center text-sm">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
                                 <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
                             </svg>
@@ -116,10 +161,20 @@
         </main>
 
         <!-- Footer -->
-        <footer class="text-center mt-12 text-gray-500 text-sm">
+        <footer class="text-center mt-12 text-gray-500 dark:text-gray-400 text-sm">
             <p>FileToJPG - Convertisseur de fichiers en images JPG</p>
             <p class="mt-1">Tous droits réservés © <span id="currentYear"></span></p>
         </footer>
+    </div>
+
+    <!-- Install button container -->
+    <div id="installContainer" class="fixed bottom-4 right-4 hidden">
+        <button id="installBtn" class="px-4 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-lg shadow-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>
+            Installer
+        </button>
     </div>
 
     <script>
@@ -132,7 +187,93 @@
         // Store files and converted images
         let filesToConvert = [];
         let convertedImages = [];
+        let deferredPrompt;
 
+        // ========== PWA Functionality ==========
+        // Check if the browser supports service workers
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').then(registration => {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                }).catch(err => {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+            });
+        }
+
+        // Handle the beforeinstallprompt event
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Prevent the mini-infobar from appearing on mobile
+            e.preventDefault();
+            // Stash the event so it can be triggered later
+            deferredPrompt = e;
+            // Show the install button
+            const installContainer = document.getElementById('installContainer');
+            installContainer.classList.remove('hidden');
+            
+            // Handle install button click
+            const installBtn = document.getElementById('installBtn');
+            installBtn.addEventListener('click', () => {
+                // Hide the install button
+                installContainer.classList.add('hidden');
+                // Show the install prompt
+                deferredPrompt.prompt();
+                // Wait for the user to respond to the prompt
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('User accepted the install prompt');
+                    } else {
+                        console.log('User dismissed the install prompt');
+                    }
+                    deferredPrompt = null;
+                });
+            });
+        });
+
+        // Track app installed event
+        window.addEventListener('appinstalled', () => {
+            console.log('App was installed');
+            const installContainer = document.getElementById('installContainer');
+            installContainer.classList.add('hidden');
+            deferredPrompt = null;
+        });
+
+        // ========== Dark/Light Mode Toggle ==========
+        const themeToggle = document.getElementById('themeToggle');
+        const sunIcon = document.getElementById('sunIcon');
+        const moonIcon = document.getElementById('moonIcon');
+
+        // Check for saved theme preference or use system preference
+        const savedTheme = localStorage.getItem('theme') || 
+                         (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        
+        // Apply the saved theme
+        if (savedTheme === 'dark') {
+            document.documentElement.classList.add('dark');
+            sunIcon.classList.add('hidden');
+            moonIcon.classList.remove('hidden');
+        } else {
+            document.documentElement.classList.remove('dark');
+            sunIcon.classList.remove('hidden');
+            moonIcon.classList.add('hidden');
+        }
+
+        // Toggle theme on button click
+        themeToggle.addEventListener('click', () => {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+                sunIcon.classList.remove('hidden');
+                moonIcon.classList.add('hidden');
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+                sunIcon.classList.add('hidden');
+                moonIcon.classList.remove('hidden');
+            }
+        });
+
+        // ========== File Conversion Logic ==========
         // Handle file selection
         function handleFiles(selectedFiles) {
             if (!selectedFiles || selectedFiles.length === 0) return;
@@ -161,14 +302,14 @@
 
             filesToConvert.forEach((file, index) => {
                 const fileItem = document.createElement('div');
-                fileItem.className = 'file-item flex items-center justify-between p-3 border border-gray-200 rounded-lg';
+                fileItem.className = 'file-item flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg';
                 
                 const fileInfo = document.createElement('div');
                 fileInfo.className = 'flex items-center space-x-3';
                 
                 // File icon based on type
                 const icon = document.createElement('div');
-                icon.className = 'text-blue-500';
+                icon.className = 'text-blue-500 dark:text-blue-400';
                 
                 const extension = file.name.split('.').pop().toLowerCase();
                 let iconPath;
@@ -192,11 +333,11 @@
                 icon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${iconPath}" /></svg>`;
                 
                 const fileName = document.createElement('span');
-                fileName.className = 'font-medium text-gray-700 truncate max-w-xs';
+                fileName.className = 'font-medium text-gray-700 dark:text-gray-300 truncate max-w-xs';
                 fileName.textContent = file.name;
                 
                 const fileSize = document.createElement('span');
-                fileSize.className = 'text-sm text-gray-500';
+                fileSize.className = 'text-sm text-gray-500 dark:text-gray-400';
                 fileSize.textContent = formatFileSize(file.size);
                 
                 fileInfo.appendChild(icon);
@@ -204,7 +345,7 @@
                 fileInfo.appendChild(document.createElement('div').appendChild(fileSize));
                 
                 const removeBtn = document.createElement('button');
-                removeBtn.className = 'text-red-500 hover:text-red-700';
+                removeBtn.className = 'text-red-500 hover:text-red-700 dark:hover:text-red-400';
                 removeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>';
                 removeBtn.onclick = () => removeFile(index);
                 
@@ -251,10 +392,10 @@
                 
                 const fileName = document.createElement('div');
                 fileName.className = 'flex justify-between text-sm';
-                fileName.innerHTML = `<span class="font-medium text-gray-700 truncate">${file.name}</span> <span class="text-gray-500">0%</span>`;
+                fileName.innerHTML = `<span class="font-medium text-gray-700 dark:text-gray-300 truncate">${file.name}</span> <span class="text-gray-500 dark:text-gray-400">0%</span>`;
                 
                 const progressBar = document.createElement('div');
-                progressBar.className = 'w-full bg-gray-200 rounded-full h-2.5';
+                progressBar.className = 'w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5';
                 progressBar.innerHTML = '<div class="progress-bar bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>';
                 
                 progressItem.appendChild(fileName);
@@ -378,9 +519,9 @@
                         
                         canvas.width = 800;
                         canvas.height = Math.max(600, result.value.split('\n').length * 20);
-                        context.fillStyle = 'white';
+                        context.fillStyle = document.documentElement.classList.contains('dark') ? '#1f2937' : 'white';
                         context.fillRect(0, 0, canvas.width, canvas.height);
-                        context.fillStyle = 'black';
+                        context.fillStyle = document.documentElement.classList.contains('dark') ? 'white' : 'black';
                         context.font = '16px Arial';
                         
                         const lines = result.value.split('\n');
@@ -441,13 +582,11 @@
                         const width = 800;
                         const height = tempDiv.offsetHeight;
                         
-                        // Use html2canvas for better rendering (would need to include the library)
-                        // For this example, we'll create a simple representation
                         canvas.width = width;
                         canvas.height = height;
-                        context.fillStyle = 'white';
+                        context.fillStyle = document.documentElement.classList.contains('dark') ? '#1f2937' : 'white';
                         context.fillRect(0, 0, width, height);
-                        context.fillStyle = 'black';
+                        context.fillStyle = document.documentElement.classList.contains('dark') ? 'white' : 'black';
                         context.font = '14px Arial';
                         
                         if (table) {
@@ -481,10 +620,10 @@
             convertedImages.forEach((conversion, index) => {
                 conversion.images.forEach((imageData, imageIndex) => {
                     const resultItem = document.createElement('div');
-                    resultItem.className = 'bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm';
+                    resultItem.className = 'bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden shadow-sm';
                     
                     const imageContainer = document.createElement('div');
-                    imageContainer.className = 'p-4 bg-gray-50 flex justify-center';
+                    imageContainer.className = 'p-4 bg-gray-50 dark:bg-gray-600 flex justify-center';
                     
                     const img = document.createElement('img');
                     img.src = imageData;
@@ -494,14 +633,14 @@
                     imageContainer.appendChild(img);
                     
                     const infoContainer = document.createElement('div');
-                    infoContainer.className = 'p-3 border-t border-gray-200';
+                    infoContainer.className = 'p-3 border-t border-gray-200 dark:border-gray-600';
                     
                     const fileName = document.createElement('div');
-                    fileName.className = 'font-medium text-gray-800 truncate';
+                    fileName.className = 'font-medium text-gray-800 dark:text-gray-200 truncate';
                     fileName.textContent = `${conversion.fileName}${conversion.images.length > 1 ? ` - Page ${imageIndex + 1}` : ''}`;
                     
                     const downloadBtn = document.createElement('button');
-                    downloadBtn.className = 'mt-2 w-full px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition text-sm flex items-center justify-center';
+                    downloadBtn.className = 'mt-2 w-full px-3 py-1 bg-blue-600 dark:bg-blue-700 text-white rounded hover:bg-blue-700 dark:hover:bg-blue-600 transition text-sm flex items-center justify-center';
                     downloadBtn.innerHTML = `
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
